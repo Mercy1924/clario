@@ -1,20 +1,14 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
-import { supabase } from '../../lib/supabase';
+import { signInWithGoogle, signInWithApple } from '../../lib/supabase';
 
 export default function WelcomeScreen() {
   const router = useRouter();
 
   const handleSignInWithGoogle = async () => {
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: 'clarios://callback',
-        },
-      });
-
+      const { error } = await signInWithGoogle();
       if (error) {
         console.error('Google sign in error:', error);
       }
@@ -25,13 +19,7 @@ export default function WelcomeScreen() {
 
   const handleSignInWithApple = async () => {
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'apple',
-        options: {
-          redirectTo: 'clarios://callback',
-        },
-      });
-
+      const { error } = await signInWithApple();
       if (error) {
         console.error('Apple sign in error:', error);
       }

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Session, SessionMode, Step, Analysis, Diagram, Space } from 'clarios-types/index';
+import type { Session, SessionMode, Step, Analysis, Diagram, Space } from '../../types/clarios';
 
 interface SessionState {
   // Current session

@@ -5,21 +5,14 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Image,
   ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSessionStore } from '../../stores/session-store';
+import { getMockAnalysis } from '../../lib/mocks';
+import type { AnalysisFinding } from '../../types/clarios';
 
 type Mode = 'tidy' | 'restructure';
-
-interface Finding {
-  id: string;
-  label: string;
-  description: string;
-  severity: 'low' | 'medium' | 'high';
-  category: 'clutter' | 'cleaning' | 'layout' | 'light' | 'flow';
-}
 
 export default function AnalysisScreen() {
   const router = useRouter();
@@ -33,47 +26,26 @@ export default function AnalysisScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [analysis, setAnalysis] = useState<{
     annotatedImageUrl: string;
-    findings: Finding[];
+    findings: AnalysisFinding[];
     modeRecommendation: Mode;
     modeRationale: string;
     contextConfirmed: boolean;
   } | null>(null);
 
   useEffect(() => {
-    // Simulate AI analysis
+    // Simulate AI analysis with mock data
     const runAnalysis = async () => {
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
-      // Mock analysis result
+      // Use mock analysis (tidy mode as default for testing)
+      const mockAnalysis = getMockAnalysis('tidy');
+
       setAnalysis({
-        annotatedImageUrl: 'https://via.placeholder.com/400x300',
-        findings: [
-          {
-            id: '1',
-            label: 'Cluttered desk surface',
-            description: 'Multiple items scattered across the desk',
-            severity: 'medium',
-            category: 'clutter',
-          },
-          {
-            id: '2',
-            label: 'Underutilized corner',
-            description: 'Empty space that could be used for storage',
-            severity: 'low',
-            category: 'layout',
-          },
-          {
-            id: '3',
-            label: 'Poor lighting',
-            description: 'Limited natural light reaching work area',
-            severity: 'medium',
-            category: 'light',
-          },
-        ],
-        modeRecommendation: 'tidy',
-        modeRationale:
-          'Starting with decluttering will create a foundation for any future reorganization.',
-        contextConfirmed: true,
+        annotatedImageUrl: mockAnalysis.annotated_image_url || '',
+        findings: mockAnalysis.findings,
+        modeRecommendation: mockAnalysis.mode_recommendation || 'tidy',
+        modeRationale: mockAnalysis.mode_rationale || '',
+        contextConfirmed: mockAnalysis.context_confirmed,
       });
 
       setIsLoading(false);
@@ -88,7 +60,7 @@ export default function AnalysisScreen() {
     // Save analysis to store
     if (analysis && currentSession) {
       setCurrentAnalysis({
-        id: '',
+        id: `analysis-${Date.now()}`,
         session_id: currentSession.id,
         annotated_image_url: analysis.annotatedImageUrl,
         findings: analysis.findings,

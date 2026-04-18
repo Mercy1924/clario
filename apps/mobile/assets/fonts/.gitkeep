@@ -1,0 +1,12 @@
+# Maven Pro Font Files Required
+
+Download Maven Pro from Google Fonts:
+https://fonts.google.com/specimen/Maven+Pro
+
+Required weights:
+- MavenPro-Regular.ttf (400)
+- MavenPro-Medium.ttf (500)
+- MavenPro-SemiBold.ttf (600)
+- MavenPro-Bold.ttf (700)
+
+Place all .ttf files in this directory.

@@ -10,29 +10,94 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSessionStore } from '../../stores/session-store';
+import { supabase } from '../../lib/supabase';
+import type { SessionMode } from '../../types/clarios';
 
 const SPACE_TYPES = ['Bedroom', 'Living Room', 'Home Office', 'Kitchen', 'Study', 'Other'] as const;
-const MODE_PREFERENCES = ['Tidy', 'Restructure', 'AI decides'] as const;
 
 type SpaceType = typeof SPACE_TYPES[number];
-type ModePreference = typeof MODE_PREFERENCES[number];
 
 export default function DescriptionScreen() {
   const router = useRouter();
-  const { setCurrentSpace } = useSessionStore();
+  const { setCurrentSpace, setCurrentSession, setSelectedMode } = useSessionStore();
 
   const [inputMethod, setInputMethod] = useState<'type' | 'speak'>('type');
   const [spaceType, setSpaceType] = useState<SpaceType | null>(null);
   const [goal, setGoal] = useState('');
-  const [modePreference, setModePreference] = useState<ModePreference>('AI decides');
   const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
 
-  const handleSkip = () => {
-    // Save empty space data and proceed to capture
+  const createSession = async (mode: SessionMode = 'tidy') => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        // For demo/testing without auth, create a mock session
+        const mockSession = {
+          id: `session-${Date.now()}`,
+          user_id: 'demo-user',
+          mode: mode as SessionMode,
+          status: 'active' as const,
+          created_at: new Date().toISOString(),
+          completed_at: null,
+          updated_at: new Date().toISOString(),
+        };
+        setCurrentSession(mockSession);
+        return mockSession;
+      }
+
+      const { data, error } = await supabase
+        .from('sessions')
+        .insert({
+          user_id: user.id,
+          mode,
+          status: 'active',
+        })
+        .select()
+        .single();
+
+      if (error || !data) {
+        console.error('Failed to create session:', error);
+        // Fallback to mock session
+        const mockSession = {
+          id: `session-${Date.now()}`,
+          user_id: user.id,
+          mode: mode as SessionMode,
+          status: 'active' as const,
+          created_at: new Date().toISOString(),
+          completed_at: null,
+          updated_at: new Date().toISOString(),
+        };
+        setCurrentSession(mockSession);
+        return mockSession;
+      }
+
+      setCurrentSession(data);
+      return data;
+    } catch (err) {
+      console.error('Create session error:', err);
+      // Fallback to mock session
+      const mockSession = {
+        id: `session-${Date.now()}`,
+        user_id: 'demo-user',
+        mode: mode as SessionMode,
+        status: 'active' as const,
+        created_at: new Date().toISOString(),
+        completed_at: null,
+        updated_at: new Date().toISOString(),
+      };
+      setCurrentSession(mockSession);
+      return mockSession;
+    }
+  };
+
+  const handleSkip = async () => {
+    setIsCreating(true);
+    // Create session and save empty space data, proceed to capture
+    await createSession('tidy');
     setCurrentSpace({
-      id: '',
-      session_id: '',
+      id: `space-${Date.now()}`,
+      session_id: `session-${Date.now()}`,
       name: null,
       type: null,
       goal: null,
@@ -40,6 +105,7 @@ export default function DescriptionScreen() {
       images: [],
       created_at: new Date().toISOString(),
     });
+    setIsCreating(false);
     router.push('/session/capture');
   };
 

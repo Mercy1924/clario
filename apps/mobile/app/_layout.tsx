@@ -20,7 +20,11 @@ SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+    // Maven Pro - Primary brand font
+    'Maven Pro': require('../assets/fonts/MavenPro-Regular.ttf'),
+    'Maven Pro-Medium': require('../assets/fonts/MavenPro-Medium.ttf'),
+    'Maven Pro-SemiBold': require('../assets/fonts/MavenPro-SemiBold.ttf'),
+    'Maven Pro-Bold': require('../assets/fonts/MavenPro-Bold.ttf'),
     ...FontAwesome.font,
   });
 
