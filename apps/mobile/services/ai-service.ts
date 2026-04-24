@@ -1,7 +1,7 @@
 import { supabase } from '../lib/supabase';
 
 /**
- * AI Service - Handles all OpenAI GPT-4o Vision API calls
+ * AI Service - Handles all Gemini 2.0 Flash API calls
  * Uses Supabase Edge Functions for secure API key management
  */
 
@@ -31,7 +31,7 @@ export interface AnalysisResult {
 }
 
 /**
- * Analyse a space using GPT-4o Vision
+ * Analyse a space using Gemini 2.0 Flash
  * @param imageUrls - Array of captured image URLs
  * @param context - Optional context from user description
  */
@@ -79,7 +79,7 @@ export interface DiagramResult {
 }
 
 /**
- * Generate before/after layout diagram using GPT-4o Vision
+ * Generate before/after layout diagram using Gemini 2.0 Flash
  * @param imageUrls - Array of captured image URLs
  */
 export const generateDiagram = async (

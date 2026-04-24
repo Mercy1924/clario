@@ -15,7 +15,7 @@ Clarios is a camera-first AI mobile assistant that analyzes real-world spaces an
 | Frontend | React Native (Expo SDK 54) + TypeScript |
 | State Management | Zustand |
 | Backend | Supabase (PostgreSQL, Auth, Storage) |
-| AI | OpenAI GPT-4o Vision (via Supabase Edge Functions) |
+| AI | Google Gemini 2.0 Flash (via Supabase Edge Functions) |
 | Voice | expo-speech (TTS), native STT |
 | Camera | expo-camera |
 | Navigation | expo-router |
@@ -36,8 +36,8 @@ clarios/
 ## Architecture Summary
 
 **Two Modes:**
-- **TIDY** — Declutter, clean, organise (supports voice interaction)
-- **RESTRUCTURE** — Rethink layout, reposition furniture (includes AI-generated before/after SVG diagram)
+- **TIDY** — Declutter, clean, organise (supports full hands-free voice mode)
+- **RESTRUCTURE** — Rethink layout, reposition furniture (includes AI-generated before/after SVG diagram; voice-assisted but diagram must remain visible)
 
 **Core Flow:**
 1. Space Description (optional, skippable) — Type or voice input
@@ -49,7 +49,8 @@ clarios/
 - Never show full task list — one card, one step, always
 - Description before capture — context must carry through to analysis
 - Before/after diagram is Restructure-only — Tidy Mode has no comparison
-- Voice mode available only in Tidy Mode — Restructure requires visual diagram reference
+- Voice mode: TIDY supports full hands-free; RESTRUCTURE supports voice-assisted only (diagram must remain visible)
+- Step cards show zoomed/cropped photo of the active area with highlight ring — not the full room photo
 
 ## Database Schema
 
@@ -108,7 +109,7 @@ apps/mobile/app/
 | Integration | Purpose |
 |---|---|
 | Supabase | Auth (Google/Apple OAuth), PostgreSQL database, Storage |
-| OpenAI GPT-4o Vision | Spatial analysis, annotated images, layout diagrams, step generation |
+| Google Gemini 2.0 Flash | Spatial analysis, annotated images, layout diagrams, step generation |
 | Native OS | Speech-to-Text, Text-to-Speech |
 
 ## Development Commands

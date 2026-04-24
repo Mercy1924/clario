@@ -30,11 +30,12 @@ serve(async (req) => {
   }
 
   try {
-    const { image_urls, context } = await req.json();
+    const { mode, analysis, diagram } = await req.json();
 
-    if (!image_urls || !Array.isArray(image_urls) || image_urls.length === 0) {
+    // Validate required inputs
+    if (!mode || !['tidy', 'restructure'].includes(mode)) {
       return new Response(
-        JSON.stringify({ error: 'At least one image URL is required' }),
+        JSON.stringify({ error: 'Valid mode (tidy/restructure) is required' }),
         {
           status: 400,
           headers: { ...getCorsHeaders(req.headers.get('origin')), 'Content-Type': 'application/json' },
@@ -42,59 +43,75 @@ serve(async (req) => {
       );
     }
 
+    if (!analysis || !analysis.findings || !analysis.steps) {
+      return new Response(
+        JSON.stringify({ error: 'Valid analysis with findings and steps is required' }),
+        {
+          status: 400,
+          headers: { ...getCorsHeaders(req.headers.get('origin')), 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    // Create Supabase client
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      {
+        auth: { autoRefreshToken: false, persistSession: false },
+      }
+    );
+
     // Build the prompt for Gemini
     const systemPrompt = `You are Clarios, a calm, directive AI assistant for space improvement.
-You analyse room photos and provide actionable guidance for people with ADHD.
-Be specific, practical, and non-judgmental. Focus on what can be done, not what's wrong.`;
+You generate sequential, actionable steps for people with ADHD.
+Each step should be:
+- Clear and specific (no ambiguity)
+- Action-oriented (starts with a verb)
+- Achievable in one sitting
+- Non-overwhelming (break complex tasks into smaller substeps)
 
-    const userPrompt = `Analyse this space and provide:
-1. Annotated observations (what you see)
-2. Findings with severity levels (low/medium/high)
-3. A mode recommendation (tidy or restructure) with rationale
-4. Sequential steps for the recommended mode
+Tone: Calm, supportive, non-judgmental. Focus on progress, not perfection.`;
 
-${context?.space_type ? `Space type: ${context.space_type}` : ''}
-${context?.goal ? `User's goal: ${context.goal}` : ''}
-${context?.mode_preference ? `User's mode preference: ${context.mode_preference}` : ''}
+    const userPrompt = `Generate detailed steps for ${mode} mode.
+
+Context from analysis:
+${analysis.findings?.map((f: any) => `- ${f.label}: ${f.description}`).join('\n') || 'No findings provided'}
+
+${diagram ? `
+Diagram annotations (for restructure mode):
+${diagram.annotations?.map((a: any) => `- ${a.label}: ${a.change || 'position noted'}`).join('\n') || 'No annotations'}
+` : ''}
+
+Base steps to expand:
+${analysis.steps?.map((s: any, i: number) => `${i + 1}. ${s.title} (${s.time_estimate || 5} min)`).join('\n') || 'No base steps provided'}
+
+Design principles:
+- One step at a time (never show full list to user)
+- Each step has 2-4 substeps
+- Time estimates are realistic (5-15 min per step)
+- For Tidy mode: include voice-friendly step descriptions
+- For Restructure mode: reference diagram positions (e.g., "move desk to position A")
 
 Respond in this exact JSON format (no markdown, no code blocks):
 {
-  "findings": [
-    {
-      "id": "1",
-      "label": "Brief label",
-      "description": "1-2 sentence description",
-      "severity": "low|medium|high",
-      "category": "clutter|cleaning|layout|light|flow"
-    }
-  ],
-  "mode_recommendation": "tidy|restructure",
-  "mode_rationale": "Why this mode is recommended for this space",
-  "context_confirmed": true|false,
   "steps": [
     {
-      "title": "Action-oriented step title",
-      "substeps": [{"id": "1", "title": "Substep description"}],
-      "time_estimate": 5
+      "title": "Clear action-oriented title",
+      "substeps": [
+        { "id": "1", "title": "Specific substep description" },
+        { "id": "2", "title": "Another substep" }
+      ],
+      "time_estimate": 10
     }
   ]
 }`;
 
-    // Prepare images for Gemini Vision
+    // Prepare parts for Gemini
     const parts: any[] = [
       { text: systemPrompt },
       { text: userPrompt },
     ];
-
-    // Add each image as a base64 data URL
-    for (const url of image_urls) {
-      parts.push({
-        inline_data: {
-          mime_type: 'image/jpeg',
-          data: url.split(',')[1] || url, // Remove data:image/jpeg;base64, prefix if present
-        },
-      });
-    }
 
     // Call Gemini API
     const apiKey = Deno.env.get('GEMINI_API_KEY');
@@ -111,7 +128,7 @@ Respond in this exact JSON format (no markdown, no code blocks):
         contents: [{ parts }],
         generationConfig: {
           temperature: 0.7,
-          maxOutputTokens: 4096,
+          maxOutputTokens: 2048,
           responseMimeType: 'application/json',
         },
       }),
@@ -133,24 +150,31 @@ Respond in this exact JSON format (no markdown, no code blocks):
     // Parse the JSON response
     let result;
     try {
-      result = JSON.parse(content);
-    } catch (parseError) {
-      console.error('JSON parse error:', parseError);
-      // Try to extract JSON from markdown code blocks
+      // Extract JSON from the response (handle markdown code blocks)
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       const jsonString = jsonMatch ? jsonMatch[0] : content;
       result = JSON.parse(jsonString);
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError);
+      throw new Error('Failed to parse AI response');
     }
 
-    // Validate required fields
-    if (!result.findings || !Array.isArray(result.findings)) {
-      throw new Error('Missing findings in AI response');
-    }
-    if (!result.mode_recommendation || !['tidy', 'restructure'].includes(result.mode_recommendation)) {
-      throw new Error('Invalid mode_recommendation in AI response');
-    }
+    // Validate response structure
     if (!result.steps || !Array.isArray(result.steps)) {
       throw new Error('Missing steps in AI response');
+    }
+
+    // Validate each step has required fields
+    for (const step of result.steps) {
+      if (!step.title || typeof step.title !== 'string') {
+        throw new Error('Each step must have a title');
+      }
+      if (!step.substeps || !Array.isArray(step.substeps)) {
+        throw new Error('Each step must have substeps array');
+      }
+      if (typeof step.time_estimate !== 'number') {
+        step.time_estimate = 5; // Default to 5 minutes
+      }
     }
 
     return new Response(JSON.stringify(result), {
@@ -160,7 +184,7 @@ Respond in this exact JSON format (no markdown, no code blocks):
   } catch (error) {
     console.error('Edge function error:', error);
     return new Response(
-      JSON.stringify({ error: error.message || 'Analysis failed' }),
+      JSON.stringify({ error: error.message || 'Step generation failed' }),
       {
         status: 500,
         headers: { ...getCorsHeaders(req.headers.get('origin')), 'Content-Type': 'application/json' },

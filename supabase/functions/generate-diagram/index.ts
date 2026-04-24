@@ -1,14 +1,31 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+// Gemini API configuration
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+
+// CORS configuration
+// Production domains + local development
+const getCorsHeaders = (origin?: string | null) => {
+  const allowedOrigins = [
+    'clarios://',                  // Mobile app scheme (always allowed)
+    'http://localhost:19006',      // Expo local development
+    'http://localhost:8081',       // Expo local development (alternative)
+    'https://clarios.app',         // Production web app
+    'https://www.clarios.app',     // Production web app (www)
+  ];
+
+  const isValidOrigin = origin && allowedOrigins.includes(origin);
+
+  return {
+    'Access-Control-Allow-Origin': isValidOrigin ? origin : 'clarios://',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  };
 };
 
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response('ok', { headers: getCorsHeaders(req.headers.get('origin')) });
   }
 
   try {
@@ -19,16 +36,16 @@ serve(async (req) => {
         JSON.stringify({ error: 'At least one image URL is required' }),
         {
           status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...getCorsHeaders(req.headers.get('origin')), 'Content-Type': 'application/json' },
         }
       );
     }
 
     // Build the prompt for diagram generation
-    let systemPrompt = `You are Clarios, a spatial design AI. You generate simple top-down SVG diagrams showing furniture layout.
+    const systemPrompt = `You are Clarios, a spatial design AI. You generate simple top-down SVG diagrams showing furniture layout.
 Create clear, labelled block diagrams - not artistic renderings. Focus on furniture positions, walls, doors, and windows.`;
 
-    let userPrompt = `Generate a top-down layout diagram as SVG.
+    const userPrompt = `Generate a top-down layout diagram as SVG.
 
 Analyse the room photo and create:
 1. A "before" SVG showing current furniture positions
@@ -42,7 +59,7 @@ Design principles:
 
 ${variation_request ? `Variation request: ${variation_request}` : ''}
 
-Respond in this exact JSON format:
+Respond in this exact JSON format (no markdown, no code blocks):
 {
   "before_svg": "<svg>...</svg>",
   "after_svg": "<svg>...</svg>",
@@ -63,44 +80,54 @@ SVG requirements:
 - ViewBox should be "0 0 100 100" for easy rendering
 - Use contrasting colors for walls vs furniture`;
 
-    // Prepare images for GPT-4o Vision
-    const imageContent = image_urls.map((url: string) => ({
-      type: 'image_url',
-      image_url: { url },
-    }));
+    // Prepare images for Gemini Vision
+    const parts: any[] = [
+      { text: systemPrompt },
+      { text: userPrompt },
+    ];
 
-    // Call OpenAI API
-    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+    // Add each image as a base64 data URL
+    for (const url of image_urls) {
+      parts.push({
+        inline_data: {
+          mime_type: 'image/jpeg',
+          data: url.split(',')[1] || url, // Remove data:image/jpeg;base64, prefix if present
+        },
+      });
+    }
+
+    // Call Gemini API
+    const apiKey = Deno.env.get('GEMINI_API_KEY');
+    if (!apiKey) {
+      throw new Error('GEMINI_API_KEY not configured');
+    }
+
+    const geminiResponse = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          {
-            role: 'user',
-            content: [{ type: 'text', text: userPrompt }, ...imageContent],
-          },
-        ],
-        max_tokens: 3000,
-        temperature: 0.7,
+        contents: [{ parts }],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 4096,
+          responseMimeType: 'application/json',
+        },
       }),
     });
 
-    if (!openaiResponse.ok) {
-      const errorText = await openaiResponse.text();
-      console.error('OpenAI API error:', errorText);
-      throw new Error(`OpenAI API error: ${openaiResponse.status}`);
+    if (!geminiResponse.ok) {
+      const errorText = await geminiResponse.text();
+      console.error('Gemini API error:', errorText);
+      throw new Error(`Gemini API error: ${geminiResponse.status}`);
     }
 
-    const openaiData = await openaiResponse.json();
-    const content = openaiData.choices[0]?.message?.content;
+    const geminiData = await geminiResponse.json();
+    const content = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (!content) {
-      throw new Error('No content from OpenAI');
+      throw new Error('No content from Gemini');
     }
 
     // Parse the JSON response
@@ -125,7 +152,7 @@ SVG requirements:
 
     return new Response(JSON.stringify(result), {
       status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...getCorsHeaders(req.headers.get('origin')), 'Content-Type': 'application/json' },
     });
   } catch (error) {
     console.error('Edge function error:', error);
@@ -133,7 +160,7 @@ SVG requirements:
       JSON.stringify({ error: error.message || 'Diagram generation failed' }),
       {
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...getCorsHeaders(req.headers.get('origin')), 'Content-Type': 'application/json' },
       }
     );
   }

@@ -110,6 +110,8 @@ After permissions, user lands on Home. Authentication is not repeated on subsequ
 | Step indicator | "Step 2 of 6" — top left |
 | Progress bar | Top of screen, below status bar |
 | Step title | Large single instruction |
+| Image | Zoomed/cropped photo of the active area only (~80% of card height) |
+| Highlight | Calm-colored ring around the target item/area |
 | Time estimate | Shown below title |
 | Substeps | Collapsed by default, expandable |
 | Primary CTA | "Done" — advances to next step |
@@ -121,12 +123,14 @@ After permissions, user lands on Home. Authentication is not repeated on subsequ
 
 | Element | Detail |
 |---|---|
-| Annotated image | Upper ~55% of screen, highlights active area |
+| Zoomed image | Upper ~60% of screen — cropped to active area only |
+| Highlight | Calm-colored ring around the target item/area |
 | Spoken instruction | Auto-plays on screen load |
 | Transcript | Shown below image — no substeps visible |
 | Time estimate | Not shown in voice mode |
 | Voice commands | "Done" / "Next" / "Repeat" / "Go back" |
 | Fallback | Tap-to-speak button always visible |
+| Interaction | Full hands-free supported — user can look away or turn screen off |
 
 ---
 
@@ -141,7 +145,7 @@ After permissions, user lands on Home. Authentication is not repeated on subsequ
 ### STEP 4B — GUIDED EXECUTION (RESTRUCTURE MODE)
 
 **Screen: Generating Layout**
-- Loading state while GPT-4o Vision processes the photo and generates the layout diagram
+- Loading state while Gemini 2.0 Flash processes the photo and generates the layout diagram
 - Calm copy: *"Mapping your space…"*
 
 ---
@@ -163,12 +167,15 @@ After permissions, user lands on Home. Authentication is not repeated on subsequ
 | Step indicator | "Step 1 of 5" — top left |
 | Progress bar | Top of screen |
 | Step title | Single task-oriented instruction |
+| Image | Zoomed/cropped photo of the furniture piece being moved |
+| Directional indicator | Arrow or highlight showing destination position |
 | Time estimate | Shown below title |
 | Diagram reference | Inline amber callout: "See diagram — position A" where relevant |
+| Diagram | Thumbnail or persistent panel — must remain visible throughout |
 | Substeps | Shown collapsed, expandable |
 | Primary CTA | "Done" — advances to next step |
 | Secondary actions | Skip this step / Go back / View diagram |
-| Voice mode | Not available — footer note confirms this |
+| Voice interaction | Voice-assisted available (TTS reads steps, vocal "Done"/"Next"), but screen must remain visible with diagram accessible |
 
 ---
 
@@ -222,6 +229,18 @@ After permissions, user lands on Home. Authentication is not repeated on subsequ
 
 **Context carries through**
 Any information provided in the Space Description screen is passed to the AI analysis and echoed back on the Analysis Result screen. If the user skips description, no context is assumed — the AI works from the photo alone.
+
+**Voice Mode Distinction: TIDY vs RESTRUCTURE**
+
+| | TIDY | RESTRUCTURE |
+|---|---|---|
+| TTS narration (AI reads step) | ✅ Yes | ✅ Yes |
+| STT commands ("Done", "Next") | ✅ Yes | ✅ Yes |
+| Full hands-free (screen off) | ✅ Supported | ❌ Not supported — diagram must remain visible |
+| Switch to text mode | ✅ Anytime | ✅ Anytime |
+
+**Zoomed Step Images**
+Both modes display a cropped/zoomed photo of the active area on each step card — not the full room photo. A calm-colored highlight ring surrounds the target item. RESTRUCTURE steps include a directional indicator (arrow) showing where the furniture piece moves to.
 
 **Description before capture**
 The description screen always appears before the camera opens. This gives the AI context before it sees the photo, enabling more targeted analysis and personalised recommendations.

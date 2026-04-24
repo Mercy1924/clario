@@ -80,7 +80,7 @@ Clarios operates in two distinct modes. The AI recommends the most appropriate m
 **Covers:**
 - Furniture repositioning based on spatial design principles
 - Light source, traffic flow and use-case analysis
-- AI-generated top-down layout diagram (current vs. suggested arrangement) rendered as a simple labelled SVG, produced by GPT-4o Vision interpreting the photo — no third-party spatial API or depth-sensing hardware required
+- AI-generated top-down layout diagram (current vs. suggested arrangement) rendered as a simple labelled SVG, produced by Gemini 2.0 Flash interpreting the photo — no third-party spatial API or depth-sensing hardware required
 - Spatial optimisation (improve aesthetics, make the space feel larger, improve light)
 
 **Voice interaction:** Text-guided steps only
@@ -137,30 +137,37 @@ The AI analyses captured images alongside any description context provided. The 
 
 ### 5.5 Guided Execution — Tidy Mode
 
+#### Visual Design (Both Modes)
+- Step cards show a **zoomed/cropped photo** of the active area only — not the full room
+- **Highlight ring** (calm color) around the target item/area
+- ~20% padding maintained to avoid claustrophobic framing
+- Progress bar visible throughout
+
 #### Text Mode
 - Steps presented one at a time as large, clear cards
 - Each top-level step has collapsible substeps (e.g. "Tidy the desk" → "Remove all items", "Throw away rubbish", "Group remaining items")
 - Time estimate displayed per step
-- Progress bar visible throughout
 - User taps "Done" to advance
 
 #### Voice Mode
 - AI speaks each top-level step aloud
-- Annotated image highlights exactly what to act on
+- Zoomed image with highlight ring shows exactly what to act on
 - No substeps displayed — voice handles all guidance
 - No time estimates in voice mode
 - User responds vocally ("Done", "Next", "Repeat", "Go back") to advance
+- Full hands-free interaction supported
 - Switchable to text mode at any point mid-session
 
 ### 5.6 Guided Execution — Restructure Mode
 
-- AI generates a top-down layout diagram using GPT-4o Vision: interprets the photo to identify furniture, walls, windows and doors, then produces a suggested rearrangement rendered as a simple labelled SVG diagram
+- AI generates a top-down layout diagram using Gemini 2.0 Flash: interprets the photo to identify furniture, walls, windows and doors, then produces a suggested rearrangement rendered as a simple labelled SVG diagram
 - Before/after diagram shown before any steps begin: current arrangement (left) vs. suggested arrangement (right)
 - User reviews and can accept or request an alternative arrangement
 - Steps do not begin until diagram is confirmed by the user
 - Once confirmed, sequential text-guided steps begin
 - Steps reference the diagram inline: "Move the desk to the north wall — see diagram position A"
-- No voice mode in Restructure — steps require ongoing visual reference to the diagram
+- **Visual design:** Step cards show zoomed/cropped photo of the furniture piece being moved, with a **directional indicator** (arrow) showing the destination
+- **Voice interaction:** Voice-assisted mode available (TTS reads steps, user can respond vocally), but **diagram must remain visible** on screen — full hands-free (screen off) is not supported
 - Before/after is specific to Restructure Mode only — Tidy Mode has no before/after comparison at any point in the flow
 
 ### 5.7 Progress Tracking & Space History
@@ -194,7 +201,7 @@ The AI analyses captured images alongside any description context provided. The 
 |---|---|
 | Image import | Live capture required for real-time accuracy |
 | Full real-time AR overlay | Hardware dependency; beyond MVP scope |
-| Third-party spatial/depth sensing API | GPT-4o Vision diagram generation is sufficient for MVP |
+| Third-party spatial/depth sensing API | Gemini 2.0 Flash diagram generation is sufficient for MVP |
 | Furniture shopping integration | Outside core guidance loop |
 | Social sharing | Not core to ADHD-first use case |
 | Community features | Premature before product-market fit |
@@ -212,7 +219,7 @@ The AI analyses captured images alongside any description context provided. The 
 | Backend | Node.js + NestJS | Scalable, modular architecture |
 | Database | PostgreSQL | Spaces, sessions, steps, user data |
 | Cache / Sessions | Redis | Session state and analysis caching |
-| AI Vision | OpenAI GPT-4o Vision | Spatial analysis, diagram generation, step generation |
+| AI Vision | Google Gemini 2.0 Flash | Spatial analysis, diagram generation, step generation |
 | AI Preprocessing | Python + FastAPI | Image preprocessing microservice |
 | Voice (STT) | Native OS Speech-to-Text | On-device, low latency |
 | Voice (TTS) | Native OS Text-to-Speech | On-device, no extra cost |
@@ -253,6 +260,7 @@ The AI analyses captured images alongside any description context provided. The 
 | Never overwhelming | No list dumps, no feature tours, no interruptions during a session |
 | Everything optional is skippable | Optional steps dismissible with a single tap, always visible |
 | Context carries through | Information the user provides at any point is echoed back and used — nothing is silently discarded |
+| Focused visual framing | Step cards show zoomed/cropped photos of the active area only — reduces visual noise and makes tasks feel smaller |
 
 ---
 
